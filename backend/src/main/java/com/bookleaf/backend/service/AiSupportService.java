@@ -22,16 +22,22 @@ public class AiSupportService {
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
 
-    @Value("${bookleaf.ai.model:llama3.2}")
+    @Value("${bookleaf.ai.model:llama-3.3-70b-versatile}")
     private String model;
 
     @Value("${bookleaf.ai.enabled:true}")
     private boolean aiEnabled;
 
-    public AiSupportService() {
+    @Value("${bookleaf.ai.api-key:}")
+    private String apiKey;
+
+    public AiSupportService(
+            @Value("${bookleaf.ai.base-url:https://api.groq.com/openai/v1}")
+            String baseUrl) {
+
         this.objectMapper = new ObjectMapper();
         this.restClient = RestClient.builder()
-                .baseUrl("http://localhost:11434")
+                .baseUrl(baseUrl)
                 .build();
     }
 
@@ -42,8 +48,7 @@ public class AiSupportService {
 
         if (draft == null || draft.toString().isBlank()) {
             throw new IllegalStateException(
-                    "No response draft was generated."
-            );
+                    "No response draft was generated.");
         }
 
         return result;
@@ -61,25 +66,27 @@ public class AiSupportService {
     }
 
     public Map<String, Object> processTicket(Ticket ticket) {
-        if (aiEnabled) {
+        if (aiEnabled && apiKey != null && !apiKey.isBlank()) {
             try {
-                log.info("Calling local Ollama model: {}", model);
+                log.info("Calling Groq AI model: {}", model);
 
-                Map<String, Object> result = requestLocalAi(ticket);
+                Map<String, Object> result = requestGroqAi(ticket);
 
-                log.info("Ollama request completed successfully.");
+                log.info("Groq AI request completed successfully.");
                 return result;
 
             } catch (Exception exception) {
-                log.error("Local Ollama AI request failed.", exception);
+                log.error("Groq AI request failed.", exception);
             }
+        } else {
+            log.warn("Groq AI disabled or API key not configured.");
         }
 
         log.warn("Using rule-based fallback for ticket.");
         return requestFallback(ticket);
     }
 
-    private Map<String, Object> requestLocalAi(Ticket ticket)
+    private Map<String, Object> requestGroqAi(Ticket ticket)
             throws Exception {
 
         String knowledgeBase = """
@@ -176,8 +183,8 @@ public class AiSupportService {
 
         Map<String, Object> requestBody = Map.of(
                 "model", model,
-                "stream", false,
-                "format", "json",
+                "temperature", 0.2,
+                "response_format", Map.of("type", "json_object"),
                 "messages", new Object[]{
                         Map.of(
                                 "role", "system",
@@ -187,32 +194,33 @@ public class AiSupportService {
                                 "role", "user",
                                 "content", prompt
                         )
-                },
-                "options", Map.of("temperature", 0.2)
+                }
         );
 
         String response = restClient.post()
-                .uri("/api/chat")
+                .uri("/chat/completions")
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
                 .body(requestBody)
                 .retrieve()
                 .body(String.class);
 
         if (response == null || response.isBlank()) {
             throw new IllegalStateException(
-                    "Ollama returned an empty HTTP response."
-            );
+                    "Groq returned an empty HTTP response.");
         }
 
         JsonNode root = objectMapper.readTree(response);
 
-        String content = root.path("message")
+        String content = root.path("choices")
+                .path(0)
+                .path("message")
                 .path("content")
                 .asText("");
 
         if (content.isBlank()) {
             throw new IllegalStateException(
-                    "Ollama returned empty message content."
-            );
+                    "Groq returned empty message content.");
         }
 
         JsonNode result = objectMapper.readTree(content);
@@ -223,8 +231,6 @@ public class AiSupportService {
 
         String ruleCategory = classifyCategory(ticket);
 
-        // Prefer the rule-based result when it identifies a
-        // specific category but the AI returns GENERAL_INQUIRY.
         String category;
 
         if (aiCategory.isBlank()
@@ -247,15 +253,14 @@ public class AiSupportService {
 
         if (draft.isBlank()) {
             throw new IllegalStateException(
-                    "Local AI returned an empty draft."
-            );
+                    "Groq returned an empty draft.");
         }
 
         return Map.of(
                 "category", category,
                 "priority", priority,
                 "draft", draft,
-                "source", "OLLAMA_LOCAL",
+                "source", "GROQ_AI",
                 "notice", ""
         );
     }
@@ -280,7 +285,7 @@ public class AiSupportService {
                 "priority", priority,
                 "draft", draft,
                 "source", "RULE_BASED_FALLBACK",
-                "notice", "Local AI unavailable. Rule-based fallback returned."
+                "notice", "Groq AI unavailable. Rule-based fallback returned."
         );
     }
 
