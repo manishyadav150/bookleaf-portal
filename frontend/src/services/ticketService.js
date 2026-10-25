@@ -1,7 +1,7 @@
 
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "https://bookleaf-portal-lfvr.onrender.com/api";
 
 export const loginUser = async (email, password) => {
   const response = await axios.post(`${API_URL}/auth/login`, {
@@ -84,7 +84,6 @@ export const updateInternalNotes = async (
   return response.data;
 };
 
-// Analyze a ticket
 export const analyzeTicket = async (token, ticketId) => {
   const response = await axios.post(
     `${API_URL}/admin/tickets/${ticketId}/analyze`,
@@ -97,7 +96,6 @@ export const analyzeTicket = async (token, ticketId) => {
   return response.data;
 };
 
-// Generate a response draft
 export const draftTicketResponse = async (token, ticketId) => {
   const response = await axios.post(
     `${API_URL}/admin/tickets/${ticketId}/draft-response`,
@@ -110,7 +108,6 @@ export const draftTicketResponse = async (token, ticketId) => {
   return response.data;
 };
 
-// Apply suggested category and priority
 export const updateTicketClassification = async (
   token,
   ticketId,

@@ -1,6 +1,7 @@
+
 import axios from "axios";
 
-const API_URL = "http://localhost:8080/api/authors";
+const API_URL = "https://bookleaf-portal-lfvr.onrender.com/api/authors";
 
 export const getAllAuthors = async (token) => {
   if (!token) {

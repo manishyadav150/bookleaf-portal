@@ -5,7 +5,7 @@ import { getAllBooks } from "./services/bookService";
 import SupportPortal from "./components/SupportPortal";
 import "./App.css";
 
-const API_URL = "http://localhost:8080/api";
+const API_URL = "https://bookleaf-portal-lfvr.onrender.com/api";
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("en-IN", {
