@@ -33,31 +33,27 @@ public class SecurityConfig {
             throws Exception {
 
         http
-            .cors(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .formLogin(form -> form.disable())
-            .httpBasic(basic -> basic.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**", "/error").permitAll()
+                .cors(Customizer.withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/error").permitAll()
 
-                // Author and book records require a valid login.
-                .requestMatchers("/api/authors", "/api/authors/**")
-                    .hasAnyRole("ADMIN", "AUTHOR")
-                .requestMatchers("/api/books", "/api/books/**")
-                    .hasAnyRole("ADMIN", "AUTHOR")
+                        // Author and book records require a valid login.
+                        .requestMatchers("/api/authors", "/api/authors/**")
+                        .hasAnyRole("ADMIN", "AUTHOR")
+                        .requestMatchers("/api/books", "/api/books/**")
+                        .hasAnyRole("ADMIN", "AUTHOR")
 
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/author/**").hasRole("AUTHOR")
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(
-                new JwtAuthenticationFilter(jwtService),
-                UsernamePasswordAuthenticationFilter.class
-            );
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/author/**").hasRole("AUTHOR")
+                        .anyRequest().authenticated())
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtService),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -67,22 +63,19 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-            List.of("http://localhost:5173")
-        );
-
+                List.of(
+                        "http://localhost:5173",
+                        "https://bookleaf-portal-1.onrender.com"));
         configuration.setAllowedMethods(
-            List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        );
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         configuration.setAllowedHeaders(
-            List.of("Authorization", "Content-Type", "Accept")
-        );
+                List.of("Authorization", "Content-Type", "Accept"));
 
         configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source =
-            new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", configuration);
 
